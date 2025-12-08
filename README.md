@@ -29,10 +29,9 @@ insurance_prediction/
 ├── requirements.txt       # Python dependencies
 ├── setup.sh               # One-click installation script
 └── run.sh                 # Execution script
+```
 
-
-
-- **Repo:**: `insurance_claim_prediction` — a small pipeline to preprocess insurance data, train several sklearn models, and report performance.
+**Repo:**: `insurance_claim_prediction` — a small pipeline to preprocess insurance data, train several sklearn models, and report performance.
 
 **Requirements**
 - **Python:**: 3.8+ recommended.
