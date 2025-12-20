@@ -1,7 +1,6 @@
 import sys
 import os
 
-# Ensure src is in pythonpath
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from sklearn.linear_model import LogisticRegression
