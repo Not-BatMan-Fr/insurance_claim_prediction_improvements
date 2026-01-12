@@ -88,7 +88,7 @@ class MatplotlibVisualizer(IVisualizer):
         if n_models == 1:
             axes = [axes]
         
-        fig.suptitle('Confusion Matrices', fontsize=16, fontweight='bold')
+        fig.suptitle('Confusion Matrices', fontsize=16, fontweight='bold', y=0.98)
         
         for ax, (model_name, pred_data) in zip(axes, model_predictions.items()):
             cm = confusion_matrix(pred_data['y_true'], pred_data['y_pred'])
@@ -110,7 +110,7 @@ class MatplotlibVisualizer(IVisualizer):
             ax.set_ylabel('Actual', fontweight='bold')
             ax.set_xlabel('Predicted', fontweight='bold')
         
-        plt.tight_layout()
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
         output_path = self.output_dir / "confusion_matrices.png"
         plt.savefig(output_path, bbox_inches='tight')
         plt.close()
