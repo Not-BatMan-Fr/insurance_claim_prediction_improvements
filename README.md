@@ -1,50 +1,126 @@
 # Insurance Claim Prediction Pipeline
 
 ## 📌 Project Overview
-This project implements a machine learning pipeline to predict whether an insurance policyholder will file a claim. It compares the performance of three classification algorithms: **Logistic Regression**, **Decision Tree**, and **Random Forest**.
 
-The codebase has been refactored from a monolithic script into a modular architecture following **SOLID principles** and to prevent data leakage.
+This project implements a robust, modular machine learning pipeline designed to predict insurance policy claims. It has been significantly refactored to adhere to **SOLID principles**, offering a highly configurable environment for experimenting with different sampling strategies, scaling techniques, and classification models.
 
-## 🚀 Key Features
-- **Modular Architecture**: Separate components for data loading, preprocessing, modeling, and visualization.
-- **Leakage Prevention**: Strict separation of training and testing data before oversampling or scaling to avoid information leakage.
-- **Imbalance Handling**: Uses `RandomOverSampler` (SMOTE-like approach) strictly on the training set to address class imbalance.
-- **Visualizations**: Built-in `MatplotlibVisualizer` produces ROC curves, confusion matrices, feature importances, class distributions, and a performance summary saved to `visualizations/`.
-- **Automated Scripts & Tests**: Includes `run.sh` for quick setup and execution and `run_tests.sh` for running unit tests with coverage reporting.
-- **Extensible**: Easily add new models (e.g., XGBoost, SVM) or custom visualizers without modifying core logic.
+Unlike standard scripts, this pipeline uses **Factory and Strategy design patterns** to allow users to swap algorithms (e.g., switching from SMOTE to ADASYN or Standard Scaling to MinMax) via configuration, without modifying the codebase.
+
+## 🚀 Key Features & Capabilities
+
+### 1. Advanced Imbalance Handling (Strategy Pattern)
+
+The pipeline addresses the inherent class imbalance in insurance data using a configurable Strategy pattern. You are no longer limited to simple random sampling.
+
+* **Supported Strategies:**
+* `smote` (Synthetic Minority Over-sampling Technique) - *Default*
+* `adasyn` (Adaptive Synthetic Sampling)
+* `random` (Random Over-sampling)
+* `none` (No sampling)
+
+
+* **Leakage Prevention:** Resampling is applied *strictly* to the training set after the train/test split.
+
+### 2. Flexible Feature Scaling
+
+Feature scaling is decoupled from the modeling logic.
+
+* **Supported Scalers:** Standard Scaler, MinMax Scaler, Robust Scaler.
+
+### 3. Modular Model Management (Factory Pattern)
+
+Models are instantiated via a `ModelFactory`, allowing for easy extension.
+
+* **Current Models:** Logistic Regression, Decision Tree, Random Forest.
+* **Extensibility:** New models (e.g., XGBoost, SVM) can be registered in `src/model_factory.py` without breaking the pipeline.
+
+### 4. Comprehensive Visualization
+
+The `MatplotlibVisualizer` automatically generates insightful plots to evaluate model performance:
+
+* **ROC Curves:** Compare AUC across all models.
+* **Confusion Matrices:** Visualizes False Positives/Negatives with percentage breakdowns.
+* **Feature Importance:** Automatically generated for tree-based models.
+* **Class Distribution:** Visualizes the impact of the selected sampling strategy (Before vs. After).
+* **Performance Comparison:** Side-by-side bar charts for Accuracy, Precision, Recall, F1, and FNR.
+
+### 5. Centralized Configuration
+
+All pipeline behaviors—features to encode, hyperparameters, and sampling methods—are controlled via `src/config.py`.
 
 ## 📂 Project Structure
+
 ```text
 insurance_claim_prediction/
-├── data/                  # Sample data stored here
-├── src/                   # Source code
-│   ├── __init__.py
-│   ├── config.py          # Centralized configuration (paths, params)
+├── data/                  # CSV Data source
+├── src/
+│   ├── config.py          # Master config (Features, Pipeline, Models)
 │   ├── interfaces.py      # Abstract Base Classes (Contracts)
-│   ├── data_loader.py     # Data ingestion logic
-│   ├── preprocessor.py    # Cleaning, encoding, and feature engineering
-│   ├── models.py          # Model adapters and evaluation metrics
-│   ├── pipeline.py        # Orchestrator handling the workflow
-│   ├── visualizer.py      # Matplotlib-based visualization utilities
-│   └── main.py            # Entry point / CLI
-├── tests/                 # Unit tests (see `run_tests.sh`)
-├── requirements.txt       # Python dependencies
-├── run.sh                 # Setup & execution script
-└── run_tests.sh           # Run tests with coverage and generate HTML report
+│   ├── model_factory.py   # Factory for creating model instances
+│   ├── sampling_strategy.py # Strategy pattern for SMOTE/ADASYN/Random
+│   ├── scaler_factory.py  # Factory for scaling logic
+│   ├── pipeline.py        # Orchestrator (Split -> Scale -> Resample -> Train)
+│   ├── preprocessor.py    # Feature engineering (One-Hot, Ordinal, Cleaning)
+│   ├── visualizer.py      # Plot generation logic
+│   └── main.py            # CLI Entry point
+├── visualizations/               # Generated plots (created at runtime)
+├── tests/                 # Unit tests
+├── requirements.txt       # Dependencies
+└── run.sh                 # Automation script
+
 ```
 
-**Repo:**: `insurance_claim_prediction` — a compact, modular pipeline to preprocess insurance data, train sklearn models, evaluate them, and (optionally) generate visualizations saved to `visualizations/`.
+## ⚙️ Configuration
 
-**Requirements**
-- **Python:** 3.8+ recommended.
-- **Dependencies:** listed in `requirements.txt`.
+You can customize the pipeline behavior by modifying `src/config.py`.
 
-**Run Training & Evaluation**
-- The main entrypoint runs preprocessing, trains three models, evaluates them, and prints a summary.
+**Example: Changing Sampling to ADASYN**
 
-Recommended (Automated) invocation:
+```python
+@dataclass
+class PipelineConfig:
+    enable_oversampling: bool = True
+    oversampling_method: str = "adasyn"  # Options: smote, random, adasyn
+
+```
+
+**Example: Tuning Model Hyperparameters**
+
+```python
+@dataclass
+class ModelConfig:
+    random_forest: Dict[str, any] = field(default_factory=lambda: {
+        "n_estimators": 200,      # Increased from default
+        "max_depth": 10,
+        "class_weight": "balanced"
+    })
+
+```
+
+You can add models in the comparison test by adding them to `src/config.py` & `src/model_factory.py`. A sample has been added for reference as comments in the respective files.
+
+## 🛠️ Installation & Usage
+
+### Prerequisites
+
+* Python 3.8+
+* Virtual Environment (recommended)
+* Data formatted as per the column names in `src/config.py` [since the columns are configurable, you can alter the column names in the config file instead]
+
+### Manual Execution (CLI)
+
+The `main.py` entry point supports command-line arguments to control visualization output.
+
 ```bash
-./run.sh
+# Run pipeline and generate visualizations (default)
+python src/main.py
+
+# Run pipeline without generating plots (faster)
+python src/main.py --no-viz
+
+# Save visualizations to a custom directory
+python src/main.py --viz-dir my_custom_plots/
+
 ```
 
 You should see console output steps (loading, preprocessing, training) and a final DataFrame with metrics for each model as shown below.
@@ -83,19 +159,28 @@ Random Forest        0.913986   0.078431   0.032  0.045455  0.503146  0.968
 <img src = "visualizations/roc_curves.png">
 
 
-**Run Tests**
-- Quick: `./run_tests.sh` (runs `pytest` with coverage and generates `htmlcov/` report)
-- Alternatively: `pytest -q` or `coverage run -m pytest` for custom use.
+### Input Data
 
-**Project Structure (key files)**
-- `src/main.py`: orchestrates configuration, pipeline and model registration (CLI supports `--no-viz` and `--viz-dir`).
-- `src/pipeline.py`: data split, imbalance handling, scaling, training loop, and optional visualization integration.
-- `src/preprocessor.py`: dataset cleaning and encoding, returns `X, y`.
-- `src/models.py`: model adapters and metric evaluation helpers.
-- `src/visualizer.py`: `MatplotlibVisualizer` for saving performance plots to disk.
-- `data/`: include `train_data.csv` (and sample `test_data.csv`, `truncated_train_data.csv` for faster iterations).
+Ensure your data is placed in the `data/` folder. The default expected filename is `train_data.csv`, which can be changed in `src/config.py`.
 
-**Troubleshooting**
-- If you see `FileNotFoundError: Dataset not found at: ...`, ensure the file exists at the configured `data_path`.
-- If you see `Target column 'is_claim' missing`, verify your CSV contains the `is_claim` column (case-sensitive).
-- For fast iteration, use `data/truncated_train_data.csv`.
+## 📊 Pipeline Logic
+
+1. **Data Loading:** Ingests CSV data.
+2. **Preprocessing:**
+* Drops identifier columns (e.g., `policy_id`).
+* Converts Yes/No columns to Boolean.
+* Applies **Ordinal Encoding** to `ncap_rating`.
+* Applies **One-Hot Encoding** to categorical fields (make, fuel_type, etc.).
+
+
+3. **Splitting:** Stratified Train/Test split.
+4. **Resampling (Train set only):** Applies the configured strategy (e.g., SMOTE) to balance classes.
+5. **Scaling:** Normalizes features using the configured Scaler.
+6. **Training & Evaluation:** Trains all enabled models and calculates metrics (Accuracy, F1, ROC-AUC, FNR).
+7. **Visualization:** Saves performance artifacts to disk.
+
+## 🔮 Future Roadmap
+
+1. Export configurations to a YAML or JSON config file
+2. Update test to accomodate the added functionaliy
+3. Imporve logging capabilites
