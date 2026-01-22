@@ -69,6 +69,49 @@ class FeatureConfig:
     # target_column: str = "is_claim"
 
 @dataclass
+class ModelConfig:
+    """
+    Configuration for individual model hyperparameters.
+    
+    Each model type has its own set of parameters that will be passed
+    to the sklearn constructor.
+    """
+    
+    # Logistic Regression hyperparameters
+    logistic_regression: Dict[str, any] = field(default_factory=lambda: {
+        "max_iter": 1000,
+        "solver": "lbfgs",
+        "class_weight": None,
+        "C": 1.0
+    })
+    
+    # Decision Tree hyperparameters
+    decision_tree: Dict[str, any] = field(default_factory=lambda: {
+        "max_depth": None,
+        "min_samples_split": 2,
+        "min_samples_leaf": 1,
+        "criterion": "gini"
+    })
+    
+    # Random Forest hyperparameters
+    random_forest: Dict[str, any] = field(default_factory=lambda: {
+        "n_estimators": 100,
+        "max_depth": None,
+        "min_samples_split": 2,
+        "min_samples_leaf": 1,
+        "criterion": "gini",
+        "max_features": "sqrt"
+    })
+    
+    # Which models to train (can enable/disable models here)
+    models_to_train: List[str] = field(default_factory=lambda: [
+        "logistic_regression",
+        "decision_tree",
+        "random_forest"
+    ])
+
+
+@dataclass
 class AppConfig:
     """Main application configuration."""
     
@@ -82,3 +125,5 @@ class AppConfig:
     
     # Feature preprocessing configuration
     features: FeatureConfig = field(default_factory=FeatureConfig)
+    # Model configuration
+    models: ModelConfig = field(default_factory=ModelConfig)

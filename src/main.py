@@ -4,16 +4,18 @@ import argparse
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.tree import DecisionTreeClassifier
+# from sklearn.ensemble import RandomForestClassifier
 
 from src.config import AppConfig
 from src.data_loader import CSVLoader
 from src.preprocessor import InsurancePreprocessor
-from src.models import SklearnModelAdapter
+# from src.models import SklearnModelAdapter
+from src.model_factory import ModelFactory
 from src.pipeline import PipelineOrchestrator
 from src.visualizer import MatplotlibVisualizer
+
 
 def main():
     """
@@ -46,13 +48,14 @@ def main():
         # 4. Pipeline
         pipeline = PipelineOrchestrator(config, loader, preprocessor, visualizer)
 
-        # 5. Add Models
-        pipeline.add_model("Logistic Regression", 
-                          SklearnModelAdapter(LogisticRegression(max_iter=1000)))
-        pipeline.add_model("Decision Tree", 
-                          SklearnModelAdapter(DecisionTreeClassifier(random_state=config.random_state)))
-        pipeline.add_model("Random Forest", 
-                          SklearnModelAdapter(RandomForestClassifier(random_state=config.random_state)))
+        # 5. Create and Add Models from Config
+        models = ModelFactory.create_models_from_config(
+            model_config=config.models,
+            random_state=config.random_state
+        )
+        
+        for model_name, model_instance in models.items():
+            pipeline.add_model(model_name, model_instance)
 
         # 6. Run
         enable_viz = not args.no_viz
