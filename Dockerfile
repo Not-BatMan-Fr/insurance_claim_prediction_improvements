@@ -1,21 +1,18 @@
-FROM python:3.12-slim
+FROM continuumio/miniconda3:latest
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+COPY environment.yml .
 
-COPY requirements.txt .    
-COPY requirements-dev.txt .
-RUN pip install --no-cache-dir -r requirements-dev.txt
+RUN conda env update -n base -f environment.yml && conda clean -a -y
 
 COPY src/ ./src/
 COPY data/ ./data/
-# COPY run.sh .
 COPY tests/ ./tests/
 
 RUN mkdir -p visualizations
+
+CMD [ "python3", "./src/main.py" ]

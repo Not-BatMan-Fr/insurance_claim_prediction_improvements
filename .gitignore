@@ -1,14 +1,22 @@
 # virtual environments
-/.venv/
-/venv/
+/.venv
+/venv
 
 # Python cache files
-/__pycache__/
+/__pycache__
 *.pyc
-/.pytest_cache/
+/.pytest_cache
 
 # Visualizations
-/visualizations/
+/visualizations
 
-# Unexecuted scripts
+# Unrequired scripts
 run.sh
+run_tests.sh
+
+# Archives
+/tests/legacy
+/archive
+
+# Test artifacts
+.coverage

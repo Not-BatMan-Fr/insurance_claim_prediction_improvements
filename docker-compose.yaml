@@ -2,8 +2,6 @@ services:
   ml-pipeline:
     build: .
     container_name: insurance-prediction-pipeline_experiments
-    # command: ["python3", "./src/main.py"]
-    command: ["pytest"]
     volumes:
       - ./visualizations:/app/visualizations
     restart: "no"
