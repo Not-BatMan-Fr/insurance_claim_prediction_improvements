@@ -1,11 +1,11 @@
 import unittest
 from unittest.mock import MagicMock
 import numpy as np
+import math
 from src.models import SklearnModelAdapter, ModelEvaluator
 
 class TestSklearnModelAdapter(unittest.TestCase):
     def test_train_and_predict(self):
-        # Mock the underlying sklearn model
         mock_sklearn = MagicMock()
         mock_sklearn.predict.return_value = np.array([1, 0])
         
@@ -13,11 +13,9 @@ class TestSklearnModelAdapter(unittest.TestCase):
         X_train = np.array([[1], [2]])
         y_train = np.array([1, 0])
         
-        # Test Train
         adapter.train(X_train, y_train)
         mock_sklearn.fit.assert_called_once_with(X_train, y_train)
         
-        # Test Predict
         res = adapter.predict(X_train)
         mock_sklearn.predict.assert_called_once_with(X_train)
         np.testing.assert_array_equal(res, np.array([1, 0]))
@@ -31,7 +29,24 @@ class TestModelEvaluator(unittest.TestCase):
         
         self.assertEqual(metrics['Model'], "TestModel")
         self.assertEqual(metrics['Accuracy'], 0.75)
-        # Precision: TP / (TP + FP) = 1 / 1 = 1.0
         self.assertEqual(metrics['Precision'], 1.0)
-        # Recall: TP / (TP + FN) = 1 / 2 = 0.5
         self.assertEqual(metrics['Recall'], 0.5)
+        self.assertAlmostEqual(metrics['F1_Score'], 0.666666, places=5)
+        self.assertEqual(metrics['FNR'], 0.5)
+
+    def test_evaluate_with_y_score(self):
+        # Perfect predictions to test ROC AUC score
+        y_true = [0, 1, 0, 1]
+        y_pred = [0, 1, 0, 1]
+        y_score = [0.1, 0.9, 0.2, 0.8] 
+        
+        metrics = ModelEvaluator.evaluate(y_true, y_pred, "ROCModel", y_score=y_score)
+        self.assertEqual(metrics['ROC_AUC'], 1.0)
+
+    def test_evaluate_exception_handling(self):
+        # Passing None to trigger the broad exception block
+        metrics = ModelEvaluator.evaluate(None, None, "FailModel")
+        
+        self.assertEqual(metrics['Model'], "FailModel")
+        self.assertTrue(math.isnan(metrics['Accuracy']))
+        self.assertTrue(math.isnan(metrics['ROC_AUC']))

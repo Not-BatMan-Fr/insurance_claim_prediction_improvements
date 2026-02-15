@@ -1,0 +1,70 @@
+import unittest
+from unittest.mock import MagicMock
+import pandas as pd
+import numpy as np
+
+from src.config import AppConfig, PipelineConfig
+from src.pipeline import PipelineOrchestrator
+from src.model_factory import ModelFactory
+from src.preprocessor import InsurancePreprocessor
+
+class TestPipelineIntegration(unittest.TestCase):
+    def setUp(self):
+        # 1. Create a tiny, valid dataset that the preprocessor won't reject
+        self.raw_data = pd.DataFrame({
+            'policy_id': ['ID1', 'ID2', 'ID3', 'ID4'],
+            'is_parking_camera': ['Yes', 'No', 'Yes', 'No'],
+            'length': ['4000', '4200', '4100', '4300'],
+            'is_claim': [1, 0, 1, 0],
+            'transmission_type': ['Manual', 'Automatic', 'Manual', 'Manual']
+        })
+        
+        # 2. Setup a real config with nested PipelineConfig
+        # We define scaler_type here inside PipelineConfig!
+        pipeline_config = PipelineConfig(
+            scaler_type="standard",
+            oversampling_method="none" 
+        )
+        
+        # 3. Pass the pipeline_config into AppConfig
+        self.config = AppConfig(
+            test_size=0.5, 
+            random_state=42,
+            pipeline=pipeline_config
+        )
+        
+        # 4. Use a real preprocessor and a mock loader to inject our tiny data
+        self.preprocessor = InsurancePreprocessor(self.config)
+        self.mock_loader = MagicMock()
+        self.mock_loader.load.return_value = self.raw_data
+
+    def test_full_orchestration_flow(self):
+        """
+        Tests the integration of Data Loader (mocked), Preprocessor, 
+        Scaler, Model, and Evaluator via the PipelineOrchestrator.
+        """
+        # Initialize the real orchestrator
+        orchestrator = PipelineOrchestrator(
+            self.config, 
+            self.mock_loader, 
+            self.preprocessor
+        )
+        
+        # Add a real (but fast) model from our factory
+        model = ModelFactory.create_model("logistic_regression", {}, random_state=self.config.random_state)
+        orchestrator.add_model("Logistic Regression", model)
+        
+        # Action: Run the entire pipeline
+        results = orchestrator.run()
+        
+        # Assertions
+        self.assertIsInstance(results, pd.DataFrame)
+        self.assertIn("Logistic Regression", results.index)
+        
+        expected_metrics = ['Accuracy', 'Precision', 'Recall', 'F1_Score', 'ROC_AUC', 'FNR']
+        for metric in expected_metrics:
+            self.assertIn(metric, results.columns)
+            
+        accuracy = results.loc["Logistic Regression", "Accuracy"]
+        self.assertGreaterEqual(accuracy, 0.0)
+        self.assertLessEqual(accuracy, 1.0)

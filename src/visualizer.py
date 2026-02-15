@@ -91,7 +91,7 @@ class MatplotlibVisualizer(IVisualizer):
         fig.suptitle('Confusion Matrices', fontsize=16, fontweight='bold', y=0.98)
         
         for ax, (model_name, pred_data) in zip(axes, model_predictions.items()):
-            cm = confusion_matrix(pred_data['y_true'], pred_data['y_pred'])
+            cm = confusion_matrix(pred_data['y_true'], pred_data['y_pred'], labels=[0, 1])
             
             # Calculate percentages
             cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] * 100
