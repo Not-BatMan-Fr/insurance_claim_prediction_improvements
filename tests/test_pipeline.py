@@ -1,54 +1,61 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 import pandas as pd
-from src.config import AppConfig
+import numpy as np
+
+from src.config import AppConfig, PipelineConfig
 from src.pipeline import PipelineOrchestrator
+from src.model_factory import ModelFactory
+from src.preprocessor import Preprocessor
 
 class TestPipeline(unittest.TestCase):
-    @patch('src.pipeline.RandomOverSampler')
-    @patch('src.pipeline.StandardScaler')
-    @patch('src.pipeline.train_test_split')
-    def test_run_pipeline(self, mock_split, mock_scaler, mock_ros):
-        # Setup Mocks
-        config = AppConfig(test_size=0.2, random_state=42)
-        mock_loader = MagicMock()
-        mock_preprocessor = MagicMock()
-        mock_model = MagicMock()
+    def setUp(self):
+        self.raw_data = pd.DataFrame({
+            'policy_id': ['ID1', 'ID2', 'ID3', 'ID4'],
+            'is_parking_camera': ['Yes', 'No', 'Yes', 'No'],
+            'length': ['4000', '4200', '4100', '4300'],
+            'is_claim': [1, 0, 1, 0],
+            'transmission_type': ['Manual', 'Automatic', 'Manual', 'Manual']
+        })
         
-        # Create dummy data
-        mock_loader.load.return_value = pd.DataFrame({'a': [1, 2]})
-        mock_preprocessor.process.return_value = (pd.DataFrame({'a': [1, 2]}), pd.Series([0, 1]))
+        pipeline_config = PipelineConfig(
+            scaler_type="standard",
+            oversampling_method="none" 
+        )
         
-        # Mock split return values (X_train, X_test, y_train, y_test)
-        mock_split.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        self.config = AppConfig(
+            test_size=0.5, 
+            random_state=42,
+            pipeline=pipeline_config
+        )
         
-        # Mock ROS and Scaler returns
-        mock_ros_instance = mock_ros.return_value
-        mock_ros_instance.fit_resample.return_value = (MagicMock(), MagicMock())
-        
-        mock_scaler_instance = mock_scaler.return_value
-        mock_scaler_instance.fit_transform.return_value = MagicMock()
-        mock_scaler_instance.transform.return_value = MagicMock()
+        self.preprocessor = Preprocessor(self.config)
+        self.mock_loader = MagicMock()
+        self.mock_loader.load.return_value = self.raw_data
 
-        # Initialize Pipeline
-        pipeline = PipelineOrchestrator(config, mock_loader, mock_preprocessor)
-        pipeline.add_model("TestModel", mock_model)
+    def test_full_orchestration_flow(self):
+        """
+        Tests the integration of Data Loader (mocked), Preprocessor, 
+        Scaler, Model, and Evaluator via the PipelineOrchestrator.
+        """
+        orchestrator = PipelineOrchestrator(
+            self.config, 
+            self.mock_loader, 
+            self.preprocessor
+        )
         
-        # Run
-        results = pipeline.run()
+        model = ModelFactory.create_model("logistic_regression", {}, random_state=self.config.random_state)
+        orchestrator.add_model("Logistic Regression", model)
         
-        # Assertions
-        # 1. Verify Loader called
-        mock_loader.load.assert_called_once()
+        results = orchestrator.run()
         
-        # 2. Verify Preprocessor called
-        mock_preprocessor.process.assert_called_once()
-        
-        # 3. Verify Model trained and predicted
-        mock_model.train.assert_called_once()
-        mock_model.predict.assert_called_once()
-        
-        # 4. Verify output is DataFrame
         self.assertIsInstance(results, pd.DataFrame)
-        self.assertIn("TestModel", results.index)
-
+        self.assertIn("Logistic Regression", results.index)
+        
+        expected_metrics = ['Accuracy', 'Precision', 'Recall', 'F1_Score', 'ROC_AUC', 'FNR']
+        for metric in expected_metrics:
+            self.assertIn(metric, results.columns)
+            
+        accuracy = results.loc["Logistic Regression", "Accuracy"]
+        self.assertGreaterEqual(accuracy, 0.0)
+        self.assertLessEqual(accuracy, 1.0)
