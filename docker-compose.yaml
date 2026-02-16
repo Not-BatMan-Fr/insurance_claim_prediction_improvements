@@ -1,7 +1,7 @@
 services:
   ml-pipeline:
     build: .
-    container_name: insurance-prediction-pipeline_experiments
+    container_name: insurance-prediction-pipeline
     volumes:
       - ./visualizations:/app/visualizations
     restart: "no"

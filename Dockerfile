@@ -5,9 +5,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
-COPY environment.yml .
+COPY environment-canary.yml .
 
-RUN conda env update -n base -f environment.yml && conda clean -a -y
+RUN conda env update -n base -f environment-canary.yml && conda clean -a -y
 
 COPY src/ ./src/
 COPY data/ ./data/
